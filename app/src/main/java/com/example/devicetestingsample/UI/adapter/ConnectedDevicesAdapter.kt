@@ -66,11 +66,12 @@ class ConnectedDevicesAdapter(
                 fun bindData(device: IoTDevice) {
                     binding.apply {
                         txtLabel.text = device.label
+                        txtMac.text = device.mac
                         txtVersion.text = "Current version: "
                         txtLastestVersion.text = "Lastest version: "
                         btnUpdateFirm.isEnabled = false
                         btnDelete.isEnabled = false
-                        btnTest.isEnabled = false
+                        btnTest.isEnabled = true
                         btnRefresh.visibility = View.GONE
                         txtPercent.text = "${deviceProgressMap[device.uuid]} %"
                         CoroutineScope(Dispatchers.Main).launch {

@@ -1,10 +1,6 @@
 package com.example.devicetestingsample.UI
 
-import android.os.Bundle
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import androidx.navigation.fragment.findNavController
 import com.example.devicetestingsample.R
 import com.example.devicetestingsample.UI.adapter.DeviceAdapter
@@ -13,12 +9,10 @@ import com.example.devicetestingsample.databinding.FragmentDashboardBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import no.nordicsemi.android.mesh.sensorutils.Bool
 import rogo.iot.module.rogocore.basesdk.ILogR
 import rogo.iot.module.rogocore.basesdk.auth.callback.AuthRequestCallback
 import rogo.iot.module.rogocore.basesdk.callback.RequestCallback
 import rogo.iot.module.rogocore.sdk.SmartSdk
-import rogo.iot.module.rogocore.sdk.callback.SuccessStatusCallback
 
 class DashboardFragment : BaseFragment<FragmentDashboardBinding>() {
     override val layoutId: Int

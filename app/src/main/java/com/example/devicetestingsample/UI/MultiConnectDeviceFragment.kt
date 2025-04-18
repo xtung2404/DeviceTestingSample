@@ -1,30 +1,43 @@
 package com.example.devicetestingsample.UI
 
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
+import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
 import android.widget.CompoundButton
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.appcompat.widget.AppCompatButton
+import androidx.appcompat.widget.AppCompatImageButton
 import androidx.navigation.fragment.findNavController
 import com.example.devicetestingsample.R
 import com.example.devicetestingsample.UI.adapter.ConnectedDevicesAdapter
 import com.example.devicetestingsample.UI.base.BaseFragment
 import com.example.devicetestingsample.UI.localdb.PrefsManager
 import com.example.devicetestingsample.databinding.FragmentMultiConnectDeviceBinding
-import com.google.android.material.button.MaterialButton.OnCheckedChangeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.bouncycastle.util.Integers
 import rogo.iot.module.rogocore.basesdk.ILogR
 import rogo.iot.module.rogocore.basesdk.callback.RequestCallback
+import rogo.iot.module.rogocore.basesdk.define.IoTCmdConst
+import rogo.iot.module.rogocore.basesdk.utils.ByteUtil
 import rogo.iot.module.rogocore.sdk.SmartSdk
+import rogo.iot.module.rogocore.sdk.callback.FirmwareVersionCheckingCallback
+import rogo.iot.module.rogocore.sdk.callback.LearnACIRRawCallback
 import rogo.iot.module.rogocore.sdk.callback.SetupDeviceWileCallback
 import rogo.iot.module.rogocore.sdk.callback.SmartSdkOTADeviceStateCallback
+import rogo.iot.module.rogocore.sdk.callback.SuccessCallback
 import rogo.iot.module.rogocore.sdk.entity.IoTDevice
+import rogo.iot.module.rogocore.sdk.entity.IoTIrProtocolInfo
+import rogo.iot.module.rogocore.sdk.entity.IoTIrRemote
 import rogo.iot.module.rogocore.sdk.entity.IoTWileScanned
 import rogo.iot.module.rogocore.sdk.entity.SetupDeviceInfo
 
@@ -35,7 +48,39 @@ class MultiConnectDeviceFragment : BaseFragment<FragmentMultiConnectDeviceBindin
     private val TAG = "MultiConnectDeviceFragment"
     var isScanning = false
     val connectedDevices = arrayListOf<IoTDevice>()
+    var currentDevice: IoTDevice?= null
+    var ioTIrProtocol: IoTIrProtocolInfo?= null
+    var ioTIrRemote: IoTIrRemote?= null
+    var ioTDeviceRemote: IoTDevice?= null
     private var sharedPrefs: PrefsManager?= null
+    val learnIrCodeList = arrayListOf<Int>()
+    var isOn = false
+    var currentTemp = 24
+    private lateinit var btnNavBack :AppCompatImageButton
+    private lateinit var btnStart :AppCompatButton
+    private lateinit var btnRetry :AppCompatButton
+    private lateinit var btnContinue :AppCompatButton
+    private lateinit var btnConfirm :AppCompatButton
+    private lateinit var txtFirmVer: TextView
+    private lateinit var txtInstruction: TextView
+    private lateinit var txtResult: TextView
+    private lateinit var lnResult : LinearLayout
+    private lateinit var lnControl: LinearLayout
+    private lateinit var lnContinue: LinearLayout
+    private val dialogTestingIr by lazy {
+        Dialog(requireContext())
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        dialogTestingIr.window?.requestFeature(Window.FEATURE_ACTION_BAR_OVERLAY)
+        dialogTestingIr.setContentView(R.layout.dialog_testing_ir_device)
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setUpDialogTestingIr()
+    }
     private val connectedDevicesAdapter: ConnectedDevicesAdapter by lazy {
         ConnectedDevicesAdapter(
             onDeleteDevice = {
@@ -79,7 +124,8 @@ class MultiConnectDeviceFragment : BaseFragment<FragmentMultiConnectDeviceBindin
                 }
             },
             onTesting = {
-
+                currentDevice = it
+                onStartTesting()
             }
         )
     }
@@ -378,6 +424,221 @@ class MultiConnectDeviceFragment : BaseFragment<FragmentMultiConnectDeviceBindin
         SmartSdk.configWileHandler().stopDiscovery()
     }
 
+    private fun setUpDialogTestingIr() {
+        btnNavBack = dialogTestingIr.findViewById<AppCompatImageButton>(R.id.btn_back)
+        btnStart = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_start)
+        btnRetry = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_retry)
+        btnContinue = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_continue)
+        btnConfirm = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_confirm)
+        txtFirmVer = dialogTestingIr.findViewById<TextView>(R.id.txt_firm_ver)
+        txtInstruction = dialogTestingIr.findViewById<TextView>(R.id.txt_instruction)
+        txtResult = dialogTestingIr.findViewById<TextView>(R.id.txt_result)
+        lnResult = dialogTestingIr.findViewById<LinearLayout>(R.id.ln_result)
+        lnControl = dialogTestingIr.findViewById<LinearLayout>(R.id.ln_control)
+        lnContinue = dialogTestingIr.findViewById<LinearLayout>(R.id.ln_continue)
+        val btnOff = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_off)
+        val btn25 = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_25)
+        val btn26 = dialogTestingIr.findViewById<AppCompatButton>(R.id.btn_26)
+        btnNavBack.setOnClickListener {
+            SmartSdk.learnIrDeviceHandler().stopLearnIr()
+            dialogTestingIr.dismiss()
+        }
+        btnStart.setOnClickListener {
+            learnIrCodeList.clear()
+            currentTemp = 24
+            btnStart.visibility = View.GONE
+            learnIr()
+            lnResult.visibility = View.VISIBLE
+        }
+
+        btnRetry.setOnClickListener {
+            lnContinue.visibility = View.GONE
+            btnContinue.visibility = View.GONE
+            btnRetry.visibility = View.GONE
+            learnIr()
+        }
+        btnContinue.setOnClickListener {
+            isOn = true
+            currentTemp += 1
+            txtInstruction.text = "Turn on the remote, aim remote at IR and choose mode Cooling, temp = ${currentTemp}"
+            lnContinue.visibility = View.GONE
+            btnContinue.visibility = View.GONE
+            btnRetry.visibility = View.GONE
+            learnIr()
+        }
+
+        btnOff.setOnClickListener {
+            ioTDeviceRemote?.let {
+                SmartSdk.controlHandler().controlDevicePower(
+                    it.uuid,
+                    false,
+                    null
+                )
+            }
+        }
+
+        btn25.setOnClickListener {
+            ioTDeviceRemote?.let {
+                SmartSdk.controlHandler().controlIr(
+                    it.uuid,
+                    convertKeyCode(
+                        25,
+                        IoTCmdConst.AC_MODE_COOLING,
+                        IoTCmdConst.FAN_SPEED_LOW
+                    ),
+                    null
+                )
+            }
+        }
+
+        btn26.setOnClickListener {
+            ioTDeviceRemote?.let {
+                SmartSdk.controlHandler().controlIr(
+                    it.uuid,
+                    convertKeyCode(
+                        26,
+                        IoTCmdConst.AC_MODE_COOLING,
+                        IoTCmdConst.FAN_SPEED_LOW
+                    ),
+                    null
+                )
+            }
+        }
+
+        btnConfirm.setOnClickListener {
+            btnConfirm.visibility = View.GONE
+            txtInstruction.text = "Waiting to control the remote"
+            SmartSdk.learnIrDeviceHandler().addAcIrRawRemote(
+                currentDevice!!.uuid,
+                "remote ${currentDevice!!.mac}",
+                null,
+                ioTIrProtocol!!.manufacturer,
+                ioTIrProtocol!!.irp,
+                IoTIrRemote().apply {
+                    this.fans = intArrayOf(IoTCmdConst.FAN_SPEED_LOW)
+                    this.modes = intArrayOf(IoTCmdConst.AC_MODE_COOLING)
+                    this.tempRange = intArrayOf(24, 25, 26)
+                    this.fanAllowIn = intArrayOf(IoTCmdConst.AC_MODE_COOLING)
+                    this.tempAllowIn = intArrayOf(IoTCmdConst.AC_MODE_COOLING)
+                },
+                object : SuccessCallback<IoTDevice> {
+                    override fun onFailure(errorCode: Int, message: String?) {
+
+                    }
+
+                    override fun onSuccess(item: IoTDevice?) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            ioTDeviceRemote = item
+                            txtInstruction.text = ""
+                            btnConfirm.visibility = View.GONE
+                            lnContinue.visibility = View.GONE
+                            lnControl.visibility = View.VISIBLE
+                        }
+                    }
+                }
+            )
+        }
+
+
+
+        dialogTestingIr.setCanceledOnTouchOutside(false)
+        val window = dialogTestingIr.window ?: return
+        window.setGravity(Gravity.BOTTOM)
+        window.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    fun onStartTesting() {
+        btnStart.visibility = View.VISIBLE
+        lnResult.visibility = View.GONE
+        lnContinue.visibility = View.GONE
+        btnConfirm.visibility = View.GONE
+        btnContinue.visibility = View.GONE
+        btnRetry.visibility = View.GONE
+        lnControl.visibility = View.GONE
+        txtInstruction.text = context?.resources?.getString(R.string.point_the_control_at_the_ir)
+        txtFirmVer.text = ""
+        txtResult.text = ""
+        dialogTestingIr.show()
+        SmartSdk.deviceHandler().checkNewFirmVersion(
+            currentDevice!!.uuid,
+            object : FirmwareVersionCheckingCallback {
+                override fun onSuccess(currentVer: String?, newVer: String?) {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        txtFirmVer.text = "Current version: ${currentVer}"
+                    }
+                }
+
+                override fun onFailure(currentVer: String?, code: Int, msg: String?) {
+                    txtFirmVer.text = ""
+                }
+            }
+        )
+    }
+    fun learnIr() {
+        txtResult.text = "Waiting for IR to receive signal...."
+        SmartSdk.learnIrDeviceHandler().learnAcIrRawRemote(
+            currentDevice!!.uuid,
+            object : LearnACIRRawCallback {
+                override fun onRequestLearnIrStatus(success: Boolean) {
+
+                }
+
+                override fun onIrRawLearned(irProtocol: IoTIrProtocolInfo?) {
+                    if (irProtocol != null) {
+                        ioTIrProtocol = irProtocol
+                        SmartSdk.learnIrDeviceHandler().setACKeyLearn(
+                            irProtocol,
+                            true,
+                            currentTemp,
+                            IoTCmdConst.AC_MODE_COOLING,
+                            IoTCmdConst.FAN_SPEED_LOW,
+                            object : RequestCallback<Int> {
+                                override fun onSuccess(p0: Int?) {
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        p0?.let {
+                                            learnIrCodeList.add(it)
+                                        }
+                                        if (learnIrCodeList.size == 3) {
+                                            lnResult.visibility = View.GONE
+                                            btnConfirm.visibility = View.VISIBLE
+                                            return@launch
+                                        }
+                                        txtResult.text = "Receive success"
+                                        lnContinue.visibility = View.VISIBLE
+                                        btnContinue.visibility = View.VISIBLE
+                                    }
+
+                                }
+
+                                override fun onFailure(p0: Int, p1: String?) {
+
+                                }
+
+                            }
+                        )
+                    } else {
+                        txtResult.text = "Receive failure"
+                        lnContinue.visibility = View.VISIBLE
+                        btnRetry.visibility = View.VISIBLE
+                    }
+                }
+
+                override fun onIrProtocolDetected(irProtocol: IoTIrProtocolInfo?) {
+
+                }
+
+                override fun onFailure(errorCode: Int, msg: String?) {
+                    txtResult.text = "Receive failure ${errorCode} ${msg}"
+                    lnContinue.visibility = View.VISIBLE
+                    btnRetry.visibility = View.VISIBLE
+                }
+            }
+        )
+    }
     companion object {
         val KEY_WIFI_SSID = "WIFI_SSID"
         val KEY_WIFI_PASSWORD = "WIFI_PASSWORD"
@@ -386,5 +647,13 @@ class MultiConnectDeviceFragment : BaseFragment<FragmentMultiConnectDeviceBindin
         val KEY_UPDATE_FIRMWARE = "UPDATE_FIRMWARE"
         val KEY_DELETE_NOT_TESTED = "DELETE_NOT_TESTED"
         val KEY_DELTETE_NOT_OTA = "DELETE_NOT_OTA"
+    }
+
+    fun convertKeyCode(temp: Int, mode: Int, fan: Int): Int {
+        var binary = "1" + ByteUtil.getBinary(mode, 3)
+        binary += ByteUtil.getBinary(temp - 15, 4)
+        binary += ByteUtil.getBinary(fan, 3)
+        binary += "11111"
+        return ByteUtil.getUShort(binary)
     }
 }

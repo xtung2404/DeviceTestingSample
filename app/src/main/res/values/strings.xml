@@ -294,4 +294,6 @@
     <string name="raw">Raw</string>
     <string name="protocol">Protocol</string>
     <string name="waiting_time">Waiting time</string>
+    <string name="start">Start</string>
+    <string name="point_the_control_at_the_ir">Aim the remote control at IR and press "OFF/ POWER OFF"</string>
 </resources>
