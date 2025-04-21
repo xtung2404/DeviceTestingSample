@@ -126,27 +126,6 @@
                 android:textSize="12sp"
                 android:textColor="@color/white"
                 android:layout_marginEnd="16dp"/>
-            <androidx.appcompat.widget.AppCompatButton
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:id="@+id/btn_25"
-                android:text="25"
-                android:textAllCaps="true"
-                android:background="@drawable/btn_yellow_20dp"
-                android:textSize="12sp"
-                android:textColor="@color/white"
-                android:layout_marginEnd="16dp"/>
-            <androidx.appcompat.widget.AppCompatButton
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:id="@+id/btn_26"
-                android:text="26"
-                android:textAllCaps="true"
-                android:background="@drawable/btn_yellow_20dp"
-                android:textSize="12sp"
-                android:textColor="@color/white"/>
         </LinearLayout>
     </LinearLayout>
 </layout>

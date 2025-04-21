@@ -34,6 +34,8 @@
     <string name="to_continue">Continue</string>
     <string name="retry">Retry</string>
     <string name="productid">ProductID</string>
+    <string name="number_of_testing_devices_per_session">Number of testing devices per session</string>
+    <string name="test">Test</string>
     <string name="wifi_ssid">WiFi SSID</string>
     <string name="wifi_password">WiFi Password</string>
     <string name="automatically_connect_to_a_new_device">Automatically connect to a new device</string>
@@ -295,5 +297,6 @@
     <string name="protocol">Protocol</string>
     <string name="waiting_time">Waiting time</string>
     <string name="start">Start</string>
-    <string name="point_the_control_at_the_ir">Aim the remote control at IR and press "OFF/ POWER OFF"</string>
+    <string name="start_testing">Start testing</string>
+    <string name="point_the_control_at_the_ir">Aim the remote control at IRs and press "OFF/ POWER OFF"</string>
 </resources>

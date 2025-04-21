@@ -60,6 +60,27 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/number_of_testing_devices_per_session"
+                    android:textColor="@color/white"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:layout_marginEnd="8dp"/>
+                <androidx.appcompat.widget.AppCompatEditText
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/edt_dev_testing"
+                    android:inputType="numberDecimal"
+                    android:textColor="@color/white"
+                    android:layout_weight="1"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:layout_marginTop="4dp">
                 <TextView
@@ -278,36 +299,21 @@
                 android:textSize="12sp"
                 android:layout_marginTop="8dp"
                 android:layout_gravity="center_horizontal"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/number_of_devices_updated_firmware"
-                android:id="@+id/txt_number_updated_devices"
-                android:textColor="@color/red"
-                android:textSize="12sp"
-                android:layout_marginTop="8dp"
-                android:layout_gravity="center_horizontal"/>
+<!--            <TextView-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:text="@string/number_of_devices_updated_firmware"-->
+<!--                android:id="@+id/txt_number_updated_devices"-->
+<!--                android:textColor="@color/red"-->
+<!--                android:textSize="12sp"-->
+<!--                android:layout_marginTop="8dp"-->
+<!--                android:layout_gravity="center_horizontal"/>-->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="@color/gray"
                 android:layout_marginTop="8dp"/>
         </LinearLayout>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1">
-            <androidx.recyclerview.widget.RecyclerView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/rv_connected_devices"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
-        </LinearLayout>
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/gray"
-            android:layout_marginTop="8dp"/>
         <androidx.appcompat.widget.AppCompatButton
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -318,5 +324,31 @@
             android:background="@drawable/btn_black_20dp"
             android:textAllCaps="true"
             android:textStyle="normal"/>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/gray"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+            <androidx.recyclerview.widget.RecyclerView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/rv_connected_devices"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+        </LinearLayout>
+        <androidx.appcompat.widget.AppCompatButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/btn_test"
+            android:text="@string/test"
+            android:textSize="14sp"
+            android:textColor="@color/white"
+            android:background="@drawable/btn_yellow_20dp"
+            android:textAllCaps="true"
+            android:textStyle="normal"
+            android:visibility="gone"/>
     </LinearLayout>
 </layout>

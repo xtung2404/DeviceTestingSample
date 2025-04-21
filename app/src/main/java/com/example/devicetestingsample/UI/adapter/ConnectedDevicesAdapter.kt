@@ -20,23 +20,31 @@ class ConnectedDevicesAdapter(
     private val onDeleteDevice: (IoTDevice) -> Unit,
     private val onUpdateFirmware: (IoTDevice, Boolean) -> Unit,
     private val onTesting: (IoTDevice) -> Unit
-): ListAdapter<IoTDevice, ConnectedDevicesAdapter.ConnectedDevicesViewHolder>(
-    object: DiffUtil.ItemCallback<IoTDevice>() {
-        override fun areItemsTheSame(oldItem: IoTDevice, newItem: IoTDevice): Boolean {
-            return oldItem.mac == newItem.mac
+): ListAdapter<Pair<IoTDevice, Boolean>, ConnectedDevicesAdapter.ConnectedDevicesViewHolder>(
+    object: DiffUtil.ItemCallback<Pair<IoTDevice, Boolean>>() {
+        override fun areItemsTheSame(
+            oldItem: Pair<IoTDevice, Boolean>,
+            newItem: Pair<IoTDevice, Boolean>
+        ): Boolean {
+            return false
         }
 
-        override fun areContentsTheSame(oldItem: IoTDevice, newItem: IoTDevice): Boolean {
-            return oldItem.mac == newItem.mac
+        override fun areContentsTheSame(
+            oldItem: Pair<IoTDevice, Boolean>,
+            newItem: Pair<IoTDevice, Boolean>
+        ): Boolean {
+            return false
         }
+
     }
 ) {
     private val deviceProgressMap = mutableMapOf<String, Int>()
+    private val testProgressMap = mutableMapOf<String, Boolean>()
 
     fun updateProgress(uuid: String, progress: Int) {
         deviceProgressMap[uuid] = progress
         val index = currentList.indexOfFirst {
-            it.uuid == uuid
+            it.first.uuid == uuid
         }
         if (index != -1) {
             notifyItemChanged(index, "progress")
@@ -45,11 +53,26 @@ class ConnectedDevicesAdapter(
 
     fun updateVersion(uuid: String) {
         val index = currentList.indexOfFirst {
-            it.uuid == uuid
+            it.first.uuid == uuid
         }
         if (index != -1) {
             notifyItemChanged(index, "version")
         }
+    }
+
+    fun updateCheckState(uuid: String) {
+        val index = currentList.indexOfFirst {
+            it.first.uuid == uuid
+        }
+        if (index != -1) {
+            notifyItemChanged(index, "state")
+        }
+    }
+
+    fun checkTestingProgress(uuid: String): Boolean {
+        val result = testProgressMap[uuid]
+        if (result != null) return result
+        return false
     }
 
 //    fun notifyItemChanged(uuid: String) {
@@ -63,34 +86,40 @@ class ConnectedDevicesAdapter(
 
     inner class ConnectedDevicesViewHolder(private val binding: LayoutItemConnectedDeviceBinding):
             RecyclerView.ViewHolder(binding.root) {
-                fun bindData(device: IoTDevice) {
+                fun bindData(device: Pair<IoTDevice, Boolean>) {
                     binding.apply {
-                        txtLabel.text = device.label
-                        txtMac.text = device.mac
+                        val currentState = testProgressMap[device.first.uuid]
+                        if (currentState == null) {
+                            testProgressMap[device.first.uuid] = false
+                        }
+                        txtLabel.text = device.first.label
+                        txtMac.text = device.first.mac
                         txtVersion.text = "Current version: "
                         txtLastestVersion.text = "Lastest version: "
                         btnUpdateFirm.isEnabled = false
                         btnDelete.isEnabled = false
                         btnTest.isEnabled = true
                         btnRefresh.visibility = View.GONE
-                        txtPercent.text = "${deviceProgressMap[device.uuid]} %"
+                        swIsTested.isEnabled = false
+                        swIsTested.isChecked = testProgressMap[device.first.uuid] == true
+                        txtPercent.text = "${deviceProgressMap[device.first.uuid]} %"
                         CoroutineScope(Dispatchers.Main).launch {
                             delay(4000)
-                            getFwVersion(device, false)
+                            getFwVersion(device.first, false)
                         }
                         btnUpdateFirm.setOnClickListener {
-                            onUpdateFirmware.invoke(device, true)
+                            onUpdateFirmware.invoke(device.first, true)
                         }
                         btnDelete.setOnClickListener {
-                            onDeleteDevice.invoke(device)
+                            onDeleteDevice.invoke(device.first)
                         }
                         btnRefresh.setOnClickListener {
                             txtVersion.text = "Current version: "
                             txtLastestVersion.text = "Lastest version: "
-                            getFwVersion(device, false)
+                            getFwVersion(device.first, false)
                         }
                         btnTest.setOnClickListener {
-                            onTesting.invoke(device)
+                            onTesting.invoke(device.first)
                         }
                     }
                 }
@@ -99,7 +128,7 @@ class ConnectedDevicesAdapter(
                     val position = adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         val device = getItem(position)
-                        if (device.uuid == uuid) {
+                        if (device.first.uuid == uuid) {
                             binding.txtPercent.text = "$progress%"
                         }
                     }
@@ -109,16 +138,38 @@ class ConnectedDevicesAdapter(
                     val position = adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         val device = getItem(position)
-                        if (device.uuid == uuid) {
+                        if (device.first.uuid == uuid) {
                             CoroutineScope(Dispatchers.Main).launch {
                                 binding.txtPercent.text = binding.root.context.resources.getString(R.string.update_firmware_successfully)
                                 delay(10000)
-                                getFwVersion(device, false)
+                                getFwVersion(device.first, false)
                             }
                         }
                     }
                 }
 
+                fun setState(uuid: String) {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val device = getItem(position)
+                        if (device.first.uuid == uuid) {
+                            testProgressMap[uuid] = true
+                            binding.swIsTested.isEnabled = true
+                            binding.swIsTested.isChecked = true
+                        }
+                    }
+                }
+
+                fun getStateCheck(uuid: String): Boolean {
+                    val position = adapterPosition
+                    if (position != RecyclerView.NO_POSITION) {
+                        val device = getItem(position)
+                        if (device.first.uuid == uuid) {
+                            return binding.swIsTested.isChecked
+                        }
+                    }
+                    return false
+                }
                 fun getFwVersion(device: IoTDevice, isForceUpdating: Boolean) {
                     CoroutineScope(Dispatchers.Main).launch {
                         binding.apply {
@@ -178,12 +229,16 @@ class ConnectedDevicesAdapter(
             when(payloads[0]) {
                 "progress" -> {
                     val device = getItem(position)
-                    val progress = deviceProgressMap[device.uuid]?: 0
-                    holder.setProgress(device.uuid, progress)
+                    val progress = deviceProgressMap[device.first.uuid]?: 0
+                    holder.setProgress(device.first.uuid, progress)
                 }
                 "version" -> {
                     val device = getItem(position)
-                    holder.setVersion(device.uuid)
+                    holder.setVersion(device.first.uuid)
+                }
+                "state" -> {
+                    val device = getItem(position)
+                    holder.setState(device.first.uuid)
                 }
             }
 

@@ -20,6 +20,13 @@ class PrefsManager (context: Context) {
 
     fun getString(key: String): String = sharedPreferences.getString(key, "") ?: ""
 
+    fun setInt(key: String, value: Int) {
+        editor.putInt(key, value)
+        editor.apply()
+    }
+
+    fun getInt(key: String): Int = sharedPreferences.getInt(key, 0)
+
     fun setBoolean(key: String, value: Boolean) {
         editor.putBoolean(key, value)
         editor.apply()
